@@ -17,6 +17,11 @@ type URLReplacement struct {
 	Replacement string
 }
 
+type NewRelicErrorGroup struct {
+	MessageRegexp *regexp.Regexp
+	GroupName     string
+}
+
 func Int(i *int, name string) {
 	if env, err := strconv.Atoi(os.Getenv(name)); err == nil {
 		*i = env
@@ -251,8 +256,26 @@ func Patterns(s *[]*regexp.Regexp, name string) {
 }
 
 func Replacements(s *[]URLReplacement, name string) error {
+	return ParseKeyValuePairs(s, name, func(key, value string) (URLReplacement, error) {
+		return URLReplacement{
+			Regexp:      RegexpFromPattern(key),
+			Replacement: value,
+		}, nil
+	})
+}
+
+func NewRelicErrorGroups(s *[]NewRelicErrorGroup, name string) error {
+	return ParseKeyValuePairs(s, name, func(key, value string) (NewRelicErrorGroup, error) {
+		return NewRelicErrorGroup{
+			MessageRegexp: regexp.MustCompile(key),
+			GroupName:     value,
+		}, nil
+	})
+}
+
+func ParseKeyValuePairs[T any](s *[]T, name string, parseFunc func(string, string) (T, error)) error {
 	if env := os.Getenv(name); len(env) > 0 {
-		ss := []URLReplacement(nil)
+		ss := []T(nil)
 
 		keyvalues := strings.Split(env, ";")
 
@@ -261,10 +284,11 @@ func Replacements(s *[]URLReplacement, name string) error {
 			if len(parts) != 2 {
 				return fmt.Errorf("Invalid key/value: %s", keyvalue)
 			}
-			ss = append(ss, URLReplacement{
-				Regexp:      RegexpFromPattern(parts[0]),
-				Replacement: parts[1],
-			})
+			item, err := parseFunc(parts[0], parts[1])
+			if err != nil {
+				return err
+			}
+			ss = append(ss, item)
 		}
 
 		*s = ss

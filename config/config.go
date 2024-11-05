@@ -17,6 +17,7 @@ import (
 )
 
 type URLReplacement = configurators.URLReplacement
+type NewRelicErrorGroup = configurators.NewRelicErrorGroup
 
 var (
 	Network                string
@@ -157,9 +158,10 @@ var (
 	DataDogEnable        bool
 	DataDogEnableMetrics bool
 
-	NewRelicAppName string
-	NewRelicKey     string
-	NewRelicLabels  map[string]string
+	NewRelicAppName     string
+	NewRelicKey         string
+	NewRelicLabels      map[string]string
+	NewRelicErrorGroups []NewRelicErrorGroup
 
 	PrometheusBind      string
 	PrometheusNamespace string
@@ -600,6 +602,9 @@ func Configure() error {
 	configurators.String(&NewRelicAppName, "IMGPROXY_NEW_RELIC_APP_NAME")
 	configurators.String(&NewRelicKey, "IMGPROXY_NEW_RELIC_KEY")
 	configurators.StringMap(&NewRelicLabels, "IMGPROXY_NEW_RELIC_LABELS")
+	if err := configurators.NewRelicErrorGroups(&NewRelicErrorGroups, "IMGPROXY_NEW_RELIC_ERROR_GROUPS"); err != nil {
+		return err
+	}
 
 	configurators.String(&PrometheusBind, "IMGPROXY_PROMETHEUS_BIND")
 	configurators.String(&PrometheusNamespace, "IMGPROXY_PROMETHEUS_NAMESPACE")

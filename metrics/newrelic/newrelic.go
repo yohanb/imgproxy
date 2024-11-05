@@ -61,6 +61,27 @@ func Init() error {
 
 	var err error
 
+	// See official New Relic documentation for more details:
+	// https://docs.newrelic.com/docs/apm/agents/go-agent/api-guides/guide-using-go-agent-api/#error-fingerprinting
+	errorGroupCallbackFunc := func(errorInfo newrelic.ErrorInfo) string {
+		if config.NewRelicErrorGroups != nil {
+			for _, group := range config.NewRelicErrorGroups {
+				if group.MessageRegexp.MatchString(errorInfo.Message) {
+					log.Debugf(
+						"New Relic error group matched: '%s' with pattern '%s' for message '%s'",
+						group.GroupName,
+						group.MessageRegexp,
+						errorInfo.Message,
+					)
+					return group.GroupName
+				}
+			}
+		}
+
+		// use default error grouping behavior
+		return ""
+	}
+
 	app, err = newrelic.NewApplication(
 		newrelic.ConfigAppName(name),
 		newrelic.ConfigLicense(config.NewRelicKey),
@@ -69,6 +90,7 @@ func Init() error {
 				c.Labels = config.NewRelicLabels
 			}
 		},
+		newrelic.ConfigSetErrorGroupCallbackFunction(errorGroupCallbackFunc),
 	)
 
 	if err != nil {
